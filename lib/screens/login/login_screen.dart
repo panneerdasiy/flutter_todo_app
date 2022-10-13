@@ -1,0 +1,107 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:todo_app/routes.dart';
+import 'package:todo_app/screens/login/bloc/login_bloc.dart';
+import 'package:todo_app/screens/login/bloc/login_events.dart';
+import 'package:todo_app/screens/login/bloc/login_state.dart';
+import 'package:todo_app/widgets/login_email_field.dart';
+import 'package:todo_app/widgets/login_password_field.dart';
+import 'package:todo_app/widgets/my_button.dart';
+
+class LoginScreen extends StatelessWidget {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  final LoginBloc bloc = LoginBloc();
+
+  LoginScreen({super.key});
+
+  void _onLoginPressed() {
+    String? email = _emailController.text;
+    String? password = _passwordController.text;
+    bloc.add(SubmitEvent(email: email, password: password));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _emailController.addListener(_emailFieldListener);
+    _passwordController.addListener(_passwordFieldListener);
+    SharedPreferences.getInstance().then((value) => bloc.sharedPref = value);
+
+    return SafeArea(
+      child: Scaffold(
+        body: SizedBox.expand(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(50),
+                child: BlocListener<LoginBloc, LoginBlocState>(
+                  bloc: bloc,
+                  listener: (context, state) {
+                    if (state.logInSuccess) {
+                      _onLoginSuccess(context);
+                    }
+                  },
+                  child: BlocBuilder<LoginBloc, LoginBlocState>(
+                    bloc: bloc,
+                    builder: (context, state) => (state.isLoading)
+                        ? const Center(child: CircularProgressIndicator())
+                        : _buildLoginContent(context, state),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Column _buildLoginContent(BuildContext context, LoginBlocState state) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Image.asset('assets/login.jpg'),
+        const SizedBox(height: 50),
+        Align(
+            alignment: Alignment.topLeft,
+            child: Text(
+              'Login',
+              style: Theme.of(context).textTheme.headline4,
+            )),
+        const SizedBox(height: 25),
+        LoginEmailField(_emailController, error: state.emailError),
+        const SizedBox(height: 10),
+        LoginPasswordField(_passwordController, error: state.passwordError),
+        const SizedBox(height: 25),
+        SizedBox(
+            width: double.infinity,
+            child: MyButton('Login', onPressed: _onLoginPressed)),
+        const SizedBox(height: 10),
+        const Text('OR'),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: MyButton('Login with Google',
+              iconData: Icons.login, onPressed: _onLoginPressed),
+        )
+      ],
+    );
+  }
+
+  void _emailFieldListener() {
+    bloc.add(EmailInput());
+  }
+
+  void _passwordFieldListener() {
+    bloc.add(PasswordInput());
+  }
+
+  void _onLoginSuccess(BuildContext context) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text("Login Success")));
+    Navigator.of(context).popAndPushNamed(Routes.dashboard);
+  }
+}
