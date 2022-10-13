@@ -1,22 +1,21 @@
 import 'dart:developer';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:todo_app/data/shared_pref_keys.dart';
+import 'package:todo_app/use_cases/login/abstract_login_use_case.dart';
+import 'package:todo_app/use_cases/login/login_result.dart';
 
 import 'login_events.dart';
 import 'login_state.dart';
 
 class LoginBloc extends Bloc<LoginEvent, LoginBlocState> {
-  late SharedPreferences _sharedPref;
+  late AbstractLoginUseCase _useCase;
 
-  set sharedPref(value) {
-    log('sharedPref received');
-    _sharedPref = value;
-    _onSharedPrefReceived();
+  set useCase(value) {
+    _useCase = value;
+    _onInitEvent();
   }
 
-  LoginBloc() : super(LoginBlocState(isLoading: true)) {
+  LoginBloc() : super(LoginBlocState.loading()) {
     on<SubmitEvent>(_onLoginSubmit);
     on<EmailInput>(_onEmailInput);
     on<PasswordInput>(_onPasswordInput);
@@ -26,19 +25,19 @@ class LoginBloc extends Bloc<LoginEvent, LoginBlocState> {
     bool isEmailValid = _isEmailValid(event.email ?? "");
     String? emailError = isEmailValid ? null : "Please enter a valid Email ID";
 
-    bool isPasswordValid = _isPasswordValid(event.password);
-    String? passwordError =
-        isPasswordValid ? null : "Please enter a valid Password";
+    log('onLoginSubmit ${event.email}');
+    if (!isEmailValid) {
+      emit(LoginBlocState.emailErr(emailError!));
+      return;
+    }
 
-    bool logInSuccess = isEmailValid && isPasswordValid;
-    if (logInSuccess) await _sharedPref.setBool(SharedPrefKeys.loginSuccess, true);
+    log('onLoginSubmit ${event.password}');
+    LoginResult result = await _useCase.login(event.email, event.password);
 
-    emit(LoginBlocState(
-      isLoading: false,
-      logInSuccess: logInSuccess,
-      emailError: emailError,
-      passwordError: passwordError,
-    ));
+    log('onLoginSubmit ${result.isSuccess} ${result.message}');
+    emit(result.isSuccess
+        ? LoginBlocState.loginSuccess()
+        : LoginBlocState.passwordErr(result.message!));
   }
 
   bool _isEmailValid(String email) {
@@ -48,31 +47,20 @@ class LoginBloc extends Bloc<LoginEvent, LoginBlocState> {
         .hasMatch(email);
   }
 
-  bool _isPasswordValid(String password) {
-    if (password.isEmpty) return false;
-    return password == "password";
-  }
-
   void _onEmailInput(event, emit) {
-    emit(LoginBlocState(
-      isLoading: false,
-      logInSuccess: false,
-      passwordError: state.passwordError,
-    ));
+    log('email reset');
+    emit(LoginBlocState.resetEmailErr(state));
   }
 
   void _onPasswordInput(event, emit) {
-    emit(LoginBlocState(
-      isLoading: false,
-      logInSuccess: false,
-      emailError: state.emailError,
-    ));
+    log('password reset');
+    emit(LoginBlocState.resetPasswordErr(state));
   }
 
-  void _onSharedPrefReceived() {
-    emit(LoginBlocState(
-      isLoading: false,
-      logInSuccess: _sharedPref.getBool('logInSuccess') ?? false,
-    ));
+  void _onInitEvent() {
+    bool loginSuccess = _useCase.isLoginSuccess();
+    emit(loginSuccess
+        ? LoginBlocState.loginSuccess()
+        : LoginBlocState.noState());
   }
 }

@@ -4,14 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:todo_app/data/remote/api_exception.dart';
 import 'package:todo_app/data/shared_pref_keys.dart';
-import 'package:todo_app/data/todo_use_case.dart';
 import 'package:todo_app/screens/dashboard/bloc/todo.dart';
+import 'package:todo_app/use_cases/todo/abstract_todo_use_case.dart';
 
 import 'dashboard_events.dart';
 import 'dashboard_state.dart';
 
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
-  final TodoUseCase _useCase;
+  final AbstractTodoUseCase _useCase;
   late SharedPreferences _sharedPref;
 
   set sharedPref(value) {
@@ -23,7 +23,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       : super(const DashboardState(
             isLoading: true, todosApiError: "", todos: [])) {
     on<GetTodosEvent>((_, __) => _onGetTodosEvent());
-    on<LogoutEvent>((_, __) => _onLogoutEvent());
+    on<LogoutEvent>((_, emit) => _onLogoutEvent(emit));
     on<OpenTodoEvent>(_onOpenTodoEvent);
     on<UpdateTodoEvent>(_onUpdateTodoEvent);
     on<UpdateResultEvent>(_onUpdateResultEvent);
@@ -104,7 +104,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     emit(state.copyWith(todos: state.todos.toList()));
   }
 
-  void _onLogoutEvent() async {
+  void _onLogoutEvent(Emitter<DashboardState> emit) async {
     await _sharedPref.setBool(SharedPrefKeys.loginSuccess, false);
     emit(state.copyWith(logOut: true));
   }

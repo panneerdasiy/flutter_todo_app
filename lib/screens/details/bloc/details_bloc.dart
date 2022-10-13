@@ -1,14 +1,14 @@
 import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
-import 'package:todo_app/data/todo_use_case.dart';
 import 'package:todo_app/screens/dashboard/bloc/todo.dart';
 import 'package:todo_app/screens/details/bloc/details_event.dart';
 import 'package:todo_app/screens/details/bloc/details_state.dart';
 import 'package:todo_app/screens/todo_actions.dart';
+import 'package:todo_app/use_cases/todo/abstract_todo_use_case.dart';
 
 class DetailsBloc extends Bloc<DetailsEvent, DetailsState> {
-  final TodoUseCase _useCase;
+  final AbstractTodoUseCase _useCase;
   final bool isSaveMode;
 
   DetailsBloc(
